@@ -92,7 +92,7 @@ fn instrumented_instantiation(
         root_nix_file.as_absolute_path().as_os_str(),
         // instrumented by `./logged-evaluation.nix`
         OsStr::new("--"),
-        &logged_evaluation_nix.as_os_str(),
+        &logged_evaluation_nix.as_absolute_path().as_os_str(),
     ])
     .stdin(Stdio::null())
     .stdout(Stdio::piped())
@@ -457,7 +457,7 @@ derivation {{
     #[test]
     fn non_utf8_nix_output() -> std::io::Result<()> {
         let tmp = tempfile::tempdir()?;
-        let cas = ContentAddressable::new(tmp.path().to_owned())?;
+        let cas = ContentAddressable::new(::AbsPathBuf::new_unchecked(tmp.path().to_owned()))?;
 
         let inner_drv = drv(
             "dep",
@@ -485,12 +485,7 @@ in {}
 
         // build, because instantiate doesn’t return the build output (obviously …)
         let (tx, rx) = std::sync::mpsc::channel();
-        let info = run(
-            tx,
-            &::NixFile::from(::AbsPathBuf::new_unchecked(cas.file_from_string(&nix_drv)?)),
-            &cas,
-        )
-        .unwrap();
+        let info = run(tx, &::NixFile::from(cas.file_from_string(&nix_drv)?), &cas).unwrap();
         let stderr = rx.iter().collect::<Vec<OsString>>();
         println!("stderr:");
         for line in &stderr {
@@ -520,12 +515,12 @@ in {}
     #[test]
     fn gracefully_handle_failing_build() -> std::io::Result<()> {
         let tmp = tempfile::tempdir()?;
-        let cas = ContentAddressable::new(tmp.path().to_owned())?;
+        let cas = ContentAddressable::new(::AbsPathBuf::new_unchecked(tmp.path().to_owned()))?;
 
-        let d = ::NixFile::from(::AbsPathBuf::new_unchecked(cas.file_from_string(&drv(
+        let d = ::NixFile::from(cas.file_from_string(&drv(
             "shell",
             &format!("dep = {};", drv("dep", r##"args = [ "-c" "exit 1" ];"##)),
-        ))?));
+        ))?);
 
         let (tx, _rx) = std::sync::mpsc::channel();
         run(tx, &d, &cas).expect("build can fail, but must not panic");

@@ -8,7 +8,9 @@ use std::path::{Path, PathBuf};
 
 /// Path constants like the GC root directory.
 pub struct Paths {
+    // TODO: make AbsPathBuf
     gc_root_dir: PathBuf,
+    // TODO: make AbsPathBuf
     daemon_socket_file: PathBuf,
     cas_store: ContentAddressable,
 }
@@ -21,6 +23,15 @@ impl Paths {
         let create_dir = |dir: PathBuf| -> std::io::Result<PathBuf> {
             std::fs::create_dir_all(&dir).and(Ok(dir))
         };
+
+        // TODO: return as good error value
+        assert!(
+            pd.cache_dir().is_absolute(),
+            "Your cache directory is not an absolute path! It is: {}",
+            pd.cache_dir().display()
+        );
+        let abs_cache_dir = ::AbsPathBuf::new_unchecked(pd.cache_dir().to_owned());
+
         Ok(Paths {
             gc_root_dir: create_dir(pd.cache_dir().join("gc_roots"))?,
             daemon_socket_file: create_dir(
@@ -30,7 +41,7 @@ impl Paths {
                     .to_owned(),
             )?
             .join("daemon.socket"),
-            cas_store: ContentAddressable::new(pd.cache_dir().join("cas"))?,
+            cas_store: ContentAddressable::new(abs_cache_dir.join("cas"))?,
         })
     }
 
