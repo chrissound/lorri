@@ -487,7 +487,7 @@ in {}
         let (tx, rx) = std::sync::mpsc::channel();
         let info = run(
             tx,
-            &::NixFile::from_absolute_path_unchecked(cas.file_from_string(&nix_drv)?),
+            &::NixFile::from(::AbsPathBuf::new_unchecked(cas.file_from_string(&nix_drv)?)),
             &cas,
         )
         .unwrap();
@@ -522,10 +522,10 @@ in {}
         let tmp = tempfile::tempdir()?;
         let cas = ContentAddressable::new(tmp.path().to_owned())?;
 
-        let d = ::NixFile::from_absolute_path_unchecked(cas.file_from_string(&drv(
+        let d = ::NixFile::from(::AbsPathBuf::new_unchecked(cas.file_from_string(&drv(
             "shell",
             &format!("dep = {};", drv("dep", r##"args = [ "-c" "exit 1" ];"##)),
-        ))?);
+        ))?));
 
         let (tx, _rx) = std::sync::mpsc::channel();
         run(tx, &d, &cas).expect("build can fail, but must not panic");
