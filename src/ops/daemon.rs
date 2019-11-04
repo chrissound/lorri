@@ -63,7 +63,8 @@ pub fn main() -> OpResult {
         for start_build in accept_messages_rx {
             let project = ::project::Project::new(
                 start_build.nix_file,
-                paths.gc_root_dir(),
+                // TODO: pass the AbsPathDir
+                paths.gc_root_dir().as_absolute_path(),
                 paths.cas_store().clone(),
             )
             // TODO: the project needs to create its gc root dir
