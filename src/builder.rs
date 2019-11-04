@@ -89,7 +89,7 @@ fn instrumented_instantiation(
         // the source file
         OsStr::new("--argstr"),
         OsStr::new("src"),
-        root_nix_file.as_os_str(),
+        root_nix_file.as_absolute_path().as_os_str(),
         // instrumented by `./logged-evaluation.nix`
         OsStr::new("--"),
         &logged_evaluation_nix.as_os_str(),
@@ -485,7 +485,12 @@ in {}
 
         // build, because instantiate doesn’t return the build output (obviously …)
         let (tx, rx) = std::sync::mpsc::channel();
-        let info = run(tx, &::NixFile::from(cas.file_from_string(&nix_drv)?), &cas).unwrap();
+        let info = run(
+            tx,
+            &::NixFile::from_absolute_path_unchecked(cas.file_from_string(&nix_drv)?),
+            &cas,
+        )
+        .unwrap();
         let stderr = rx.iter().collect::<Vec<OsString>>();
         println!("stderr:");
         for line in &stderr {
@@ -517,7 +522,7 @@ in {}
         let tmp = tempfile::tempdir()?;
         let cas = ContentAddressable::new(tmp.path().to_owned())?;
 
-        let d = ::NixFile::from(cas.file_from_string(&drv(
+        let d = ::NixFile::from_absolute_path_unchecked(cas.file_from_string(&drv(
             "shell",
             &format!("dep = {};", drv("dep", r##"args = [ "-c" "exit 1" ];"##)),
         ))?);
