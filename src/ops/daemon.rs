@@ -1,7 +1,7 @@
 //! Run a BuildLoop for `shell.nix`, watching for input file changes.
 //! Can be used together with `direnv`.
 use crate::daemon::Daemon;
-use crate::ops::{ok, ExitError, OpResult};
+use crate::ops::error::{ok, ExitError, OpResult};
 use crate::socket::communicate::listener;
 use crate::socket::communicate::CommunicationType;
 use crate::socket::ReadWriter;

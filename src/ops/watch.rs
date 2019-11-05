@@ -2,7 +2,7 @@
 //! Can be used together with `direnv`.
 use crate::build_loop::{BuildError, BuildLoop};
 use crate::cli::WatchOptions;
-use crate::ops::{ok, ExitError, OpResult};
+use crate::ops::error::{ok, ExitError, OpResult};
 use crate::project::Project;
 use std::fmt::Debug;
 use std::io::Write;
