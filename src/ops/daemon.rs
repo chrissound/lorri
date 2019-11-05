@@ -16,7 +16,7 @@ pub fn main() -> OpResult {
     let socket_path = ::socket::path::SocketPath::from(&daemon_socket_file);
     // TODO: move listener into Daemon struct?
     let listener = listener::Listener::new(&socket_path).map_err(|e| match e {
-        ::socket::path::BindError::OtherProcessListening => ExitError::errmsg(format!(
+        ::socket::path::BindError::OtherProcessListening => ExitError::user_error(format!(
             "Another daemon is already listening on the socket at {}. \
              We are currently only allowing one daemon to be running at the same time.",
             socket_path.display()
