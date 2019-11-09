@@ -1,8 +1,9 @@
-{ pkgs ? import ./nix/nixpkgs.nix { enableMozillaOverlay = true; }
-, isDevelopmentShell ? true }:
+{ isDevelopmentShell ? true
+, pkgs ? import ./nix/nixpkgs.nix { enableMozillaOverlay = true; }
+}:
 
 # Must have the stable rust overlay (enableMozillaOverlay)
-assert isDevelopmentShell -> pkgs ? latest;
+assert isDevelopmentShell -> pkgs ? rustChannels;
 
 let
   rustChannels =
@@ -11,8 +12,38 @@ let
       (import ./nix/rust-channels.nix {
         stableVersion = "1.35.0";
       });
+
+  # Keep project-specific shell commands local
+  HISTFILE = "${toString ./.}/.bash_history";
+
+  # Lorri-specific
+
+  # The root directory of this project
+  LORRI_ROOT = toString ./.;
+  # Needed by the lorri build.rs to determine its own version
+  # for the development repository (non-release), we set it to 1
+  BUILD_REV_COUNT = 1;
+  # Needed by the lorri build.rs to access some tools used during
+  # the build of lorri's environment derivations.
+  RUN_TIME_CLOSURE = pkgs.callPackage ./nix/runtime.nix {};
+
+  # Rust-specific
+
+  # Enable printing backtraces for rust binaries
+  RUST_BACKTRACE = 1;
+
+  # Only in development shell
+
+  # Needed for racer “jump to definition” editor support
+  # In Emacs with `racer-mode`, you need to set
+  # `racer-rust-src-path` to `nil` for it to pick
+  # up the environment variable with `direnv`.
+  RUST_SRC_PATH = "${rustChannels.stable.rust-src}/lib/rustlib/src/rust/src/";
+  # Set up a local directory to install binaries in
+  CARGO_INSTALL_ROOT = "${LORRI_ROOT}/.cargo";
+
 in
-pkgs.mkShell rec {
+pkgs.mkShell ({
   name = "lorri";
   buildInputs = [
     # This rust comes from the Mozilla rust overlay so we can
@@ -39,32 +70,9 @@ pkgs.mkShell rec {
     (pkgs.callPackage ./nix/racer.nix { rustNightly = rustChannels.nightly; })
   ];
 
-  # Keep project-specific shell commands local
-  HISTFILE = "${toString ./.}/.bash_history";
+  inherit BUILD_REV_COUNT RUN_TIME_CLOSURE;
 
-  # Lorri-specific
-
-  # The root directory of this project
-  LORRI_ROOT = toString ./.;
-  # Needed by the lorri build.rs to determine its own version
-  # for the development repository (non-release), we set it to 1
-  BUILD_REV_COUNT = 1;
-  # Needed by the lorri build.rs to access some tools used during
-  # the build of lorri's environment derivations.
-  RUN_TIME_CLOSURE = pkgs.callPackage ./nix/runtime.nix {};
-
-  # Rust-specific
-
-  # Enable printing backtraces for rust binaries
-  RUST_BACKTRACE = 1;
-  # Needed for racer “jump to definition” editor support
-  # In Emacs with `racer-mode`, you need to set
-  # `racer-rust-src-path` to `nil` for it to pick
-  # up the environment variable with `direnv`.
-  RUST_SRC_PATH = "${rustChannels.stable.rust-src}/lib/rustlib/src/rust/src/";
-  # Set up a local directory to install binaries in
-  CARGO_INSTALL_ROOT = "${LORRI_ROOT}/.cargo";
-
+  inherit RUST_BACKTRACE;
 
   # Executed when entering `nix-shell`
   shellHook = ''
@@ -148,3 +156,7 @@ pkgs.mkShell rec {
   preferLocalBuild = true;
   allowSubstitutes = false;
 }
+//
+(if isDevelopmentShell then {
+  inherit RUST_SRC_PATH CARGO_INSTALL_ROOT HISTFILE;
+} else {}))
