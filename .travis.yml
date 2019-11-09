@@ -142,14 +142,6 @@
     - >-
       nix-build --arg isDevelopmentShell false -A ci.testsuite shell.nix > ./testsuite
     - >-
-      echo "pushing these paths to cachix:"
-    - >-
-      cat ./testsuite
-    - >
-      if [ -n "$CACHIX_SIGNING_KEY" ]; then
-        cachix push lorri-test < ./testsuite
-      fi
-    - >-
       eval $(cat ./testsuite)
   - "install":
     - >-
@@ -207,13 +199,5 @@
       nix-env -i ./result
     - >-
       readlink ./result > ./cachix-file
-    - >-
-      echo "pushing these paths to cachix:"
-    - >-
-      cat ./cachix-file
-    - >
-      if [ -n "$CACHIX_SIGNING_KEY" ]; then
-        cachix push lorri-test < ./cachix-file
-      fi
     - >-
       lorri self-upgrade local $(pwd)

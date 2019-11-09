@@ -5,7 +5,9 @@ let
 
   cachix-queue-file = "$HOME/push-to-cachix";
   cachix-repo = "lorri-test";
-  pushToCachix = cachix-queue-file: [
+  # cachix 3 on macOS is broken on travis, see
+  # https://github.com/cachix/cachix/issues/228#issuecomment-533634704
+  pushToCachix = { isDarwin }: cachix-queue-file: if isDarwin then [] else [
     # read every store path written by previous phases
     # from the cachix-queue-file file and push to cachix
     ''echo "pushing these paths to cachix:"''
@@ -43,7 +45,7 @@ let
   };
 
   scripts = {
-    builds = {
+    builds = { isDarwin ? false }: {
       name = "nix-build";
       script = [
         ''set -e''
@@ -52,12 +54,12 @@ let
       ]
       # push build closure to cachix
       ++ [ ''readlink ./result > ./cachix-file'' ]
-      ++ pushToCachix "./cachix-file"
+      ++ pushToCachix { inherit isDarwin; } "./cachix-file"
       # test lorri self-upgrade
       ++ [ ''lorri self-upgrade local $(pwd)'' ];
     };
 
-    lints = {
+    lints = { isDarwin ? false }: {
       name = "cargo build & linters";
       script = [
         ''set -e''
@@ -73,7 +75,7 @@ let
         ''nix-build --arg isDevelopmentShell false -A ci.testsuite shell.nix > ./testsuite''
       ]
       # push test suite closure to cachix
-      ++ pushToCachix "./testsuite"
+      ++ pushToCachix { inherit isDarwin; } "./testsuite"
       # run testsuite
       ++ [ ''eval $(cat ./testsuite)'' ];
     };
@@ -147,15 +149,15 @@ let
       matrix.include = map mergeShallowConcatLists [
         # Verifying lints on macOS and Linux ensures nix-shell works
         # on both platforms.
-        [ hosts.linux scripts.setup-cachix scripts.lints (scripts.cache "linux") ]
+        [ hosts.linux scripts.setup-cachix (scripts.lints {}) (scripts.cache "linux") ]
         # cachix 3 on macOS is broken on travis, see
         # https://github.com/cachix/cachix/issues/228#issuecomment-533634704
-        [ hosts.macos /*scripts.macos-cachix-fix scripts.setup-cachix*/ scripts.lints (scripts.cache "macos") ]
+        [ hosts.macos /*scripts.macos-cachix-fix scripts.setup-cachix*/ (scripts.lints { isDarwin = true; }) (scripts.cache "macos") ]
 
-        [ hosts.linux scripts.setup-cachix scripts.builds ]
+        [ hosts.linux scripts.setup-cachix (scripts.builds {}) ]
         # cachix 3 on macOS is broken on travis, see
         # https://github.com/cachix/cachix/issues/228#issuecomment-533634704
-        [ hosts.macos /*scripts.macos-cachix-fix scripts.setup-cachix*/ scripts.builds ]
+        [ hosts.macos /*scripts.macos-cachix-fix scripts.setup-cachix*/ (scripts.builds { isDarwin = true; }) ]
       ];
     };
 in pkgs.runCommand "travis.yml" {
